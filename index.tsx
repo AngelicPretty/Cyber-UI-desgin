@@ -180,18 +180,27 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => (
       <div style={{ position: 'absolute', top: '20%', left: '20%', width: '60%', height: '60%', border: `1px dashed ${COLOR_FUI_RED}`, borderRadius: '50%' }} />
     </div>
 
-    <div style={{ position: 'absolute', top: 40, left: 40, color: COLOR_FUI_RED, fontSize: '0.7rem' }}>
+    <div style={{ position: 'absolute', top: 40, left: 40, color: COLOR_FUI_RED, fontSize: '0.7rem'}}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Terminal size={14} />
         <span style={{ letterSpacing: 4 }}>SYS_AUTH_READY: [TRUE]</span>
       </div>
-      <div style={{ marginTop: 5, opacity: 0.5 }}>KERNEL_ID: 0xFB82-991A</div>
+      <div style={{ marginTop: 5, opacity: 0.5 }}>WELECOM TO THE DATABASE</div>
+    </div>
+
+    <div style={{ position: 'absolute', bottom: 40, left: 40, color: COLOR_FUI_RED, fontSize: '0.7rem'}}>
+      <div style={{ marginTop: 5, opacity: 0.5 }}>[+] KERNEL_ID: 0xFB82-991A</div>
+      <div style={{ marginTop: 5, opacity: 0.5 }}>[+] PROTOCOL — ONLY C3C5 CERTIFIED<br />
+                                                  [+] AND DHS 5TH CLASS OFFICERS<br />
+                                                  [+] ARE ALLOWED TO MANIPULATE,<br />
+                                                  [+] ACCESS OR DISABLE THIS DEVICE.
+      </div>
     </div>
 
     <div style={{ textAlign: 'center', zIndex: 10 }}>
       <Database size={100} color={COLOR_FUI_CYAN} style={{ filter: `drop-shadow(0 0 15px ${COLOR_FUI_CYAN})`, marginBottom: 30 }} />
       <h1 style={{ fontSize: '4rem', margin: 0, letterSpacing: 15, fontWeight: 900, color: '#FFF' }}>
-        CTOS <span style={{ color: COLOR_FUI_CYAN }}>LOGIN</span>
+        CTOS <span style={{ color: COLOR_FUI_RED }}>LOGIN</span>
       </h1>
       <p style={{ color: COLOR_FUI_RED, letterSpacing: 5, fontSize: '0.9rem', marginTop: 10, opacity: 0.8 }}>CENTRAL OPERATING SYSTEM ACCESS TERMINAL</p>
     </div>
