@@ -200,7 +200,7 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => (
     <div style={{ textAlign: 'center', zIndex: 10 }}>
       <Database size={100} color={COLOR_FUI_CYAN} style={{ filter: `drop-shadow(0 0 15px ${COLOR_FUI_CYAN})`, marginBottom: 30 }} />
       <h1 style={{ fontSize: '4rem', margin: 0, letterSpacing: 15, fontWeight: 900, color: '#FFF' }}>
-        CTOS <span style={{ color: COLOR_FUI_RED }}>LOGIN</span>
+        DATABASE <span style={{ color: COLOR_FUI_RED }}>LOGIN</span>
       </h1>
       <p style={{ color: COLOR_FUI_RED, letterSpacing: 5, fontSize: '0.9rem', marginTop: 10, opacity: 0.8 }}>CENTRAL OPERATING SYSTEM ACCESS TERMINAL</p>
     </div>
@@ -318,7 +318,7 @@ const MainFUI = () => {
             fontFamily: "'Rajdhani', sans-serif", fontSize: '3rem', margin: 0, color: COLOR_FUI_RED,
             fontWeight: 700, letterSpacing: 15, textShadow: `0 0 15px ${COLOR_FUI_RED}88`
           }}>
-            CTOS DATABASE
+            SYSTEM DATABASE
           </h2>
           <div style={{ display: 'flex', gap: 40, marginTop: 10, alignItems: 'center' }}>
             <div style={{ height: 1, width: 200, background: `linear-gradient(90deg, transparent, ${COLOR_FUI_CYAN})` }} />
