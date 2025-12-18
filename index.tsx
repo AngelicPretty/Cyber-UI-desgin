@@ -30,15 +30,15 @@ const drawLandmarks = (DrawingUtilsNS.drawLandmarks || (DrawingUtilsNS as any).d
 const CyberDatabaseLogo = () => {
   return (
     <div className="cyber-logo-container" style={{
-      width: '140px',
-      height: '80px',
+      width: '120px',
+      height: '100px',
       position: 'relative',
       marginBottom: '30px',
       cursor: 'pointer',
       transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
     }}>
       <style>{`
-        .cyber-logo-container:hover { transform: scale(1.1); }
+        .cyber-logo-container:hover { transform: scale(1.1) translateY(-5px); }
         .cyber-logo-container:hover .logo-svg { filter: drop-shadow(0 0 15px ${COLOR_FUI_RED}); }
         .cyber-logo-container:hover .scan-line { opacity: 1; top: 100%; }
         
@@ -61,25 +61,32 @@ const CyberDatabaseLogo = () => {
           transition: top 1.5s linear, opacity 0.3s ease;
           pointer-events: none;
         }
-
-        @keyframes pulse-opacity {
-          0%, 100% { opacity: 0.8; }
-          50% { opacity: 1; }
-        }
       `}</style>
       
-      <svg className="logo-svg" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Left Mountain */}
-        <path d="M10 90L60 10L110 90" stroke={COLOR_FUI_RED} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M30 60L55 60" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M20 75L75 75" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M45 35L75 82" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+      <svg className="logo-svg" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Stylized Geometric Database (Stacked hexagonal platters) */}
         
-        {/* Right Mountain */}
-        <path d="M90 90L140 10L190 90" stroke={COLOR_FUI_RED} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M110 60L135 60" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M100 75L155 75" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
-        <path d="M125 35L155 82" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        {/* Top Platter */}
+        <path d="M30 20 L90 20 L105 30 L90 40 L30 40 L15 30 Z" stroke={COLOR_FUI_RED} strokeWidth="2.5" strokeLinejoin="round"/>
+        <path d="M35 30 L85 30" stroke={COLOR_FUI_RED} strokeWidth="1" strokeOpacity="0.6"/>
+        
+        {/* Middle Platter */}
+        <path d="M30 45 L90 45 L105 55 L90 65 L30 65 L15 55 Z" stroke={COLOR_FUI_RED} strokeWidth="2.5" strokeLinejoin="round"/>
+        <path d="M35 55 L85 55" stroke={COLOR_FUI_RED} strokeWidth="1" strokeOpacity="0.6"/>
+
+        {/* Bottom Platter */}
+        <path d="M30 70 L90 70 L105 80 L90 90 L30 90 L15 80 Z" stroke={COLOR_FUI_RED} strokeWidth="2.5" strokeLinejoin="round"/>
+        <path d="M35 80 L85 80" stroke={COLOR_FUI_RED} strokeWidth="1" strokeOpacity="0.6"/>
+
+        {/* Vertical Connecting Lines */}
+        <path d="M30 40 L30 45" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M90 40 L90 45" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M30 65 L30 70" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M90 65 L90 70" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        
+        {/* Accent Geometric Detail */}
+        <path d="M50 15 L70 15" stroke={COLOR_FUI_RED} strokeWidth="1" strokeOpacity="0.4"/>
+        <circle cx="60" cy="15" r="1.5" fill={COLOR_FUI_RED} fillOpacity="0.8"/>
       </svg>
       
       <div className="scan-line" />
