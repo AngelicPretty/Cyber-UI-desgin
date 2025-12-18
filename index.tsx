@@ -3,44 +3,105 @@ import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { EffectComposer, Bloom } from '@react-three/postprocessing';
-import { OrbitControls, Float } from '@react-three/drei';
+import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
+import { OrbitControls, Float, Stars } from '@react-three/drei';
 import * as HandsNS from '@mediapipe/hands';
 import * as CameraNS from '@mediapipe/camera_utils';
 import * as DrawingUtilsNS from '@mediapipe/drawing_utils';
-import { Database, Activity, Terminal, Cpu, Zap, Radio, Lock } from 'lucide-react';
+import { Database, Activity, Terminal, Cpu, Zap, Radio, Lock, ShieldCheck, Box } from 'lucide-react';
 
 // --- Types & Constants ---
 type AppState = 'LOGIN' | 'LOADING' | 'MAIN';
-const PARTICLE_COUNT = 20000;
+const PARTICLE_COUNT = 25000;
 const COLOR_FUI_RED = '#F75049';
 const COLOR_FUI_CYAN = '#5EF6FF';
 const COLOR_FUI_GREEN = '#1DED83';
+const BG_COLOR_ACCENT = '#120a0b';
 
-// Accessing MediaPipe classes from the imported modules
+// Accessing MediaPipe classes
 const Hands = (HandsNS.Hands || (HandsNS as any).default?.Hands || (window as any).Hands);
 const Camera = (CameraNS.Camera || (CameraNS as any).default?.Camera || (window as any).Camera);
 const HAND_CONNECTIONS = (HandsNS.HAND_CONNECTIONS || (HandsNS as any).default?.HAND_CONNECTIONS || (window as any).HAND_CONNECTIONS);
 const drawConnectors = (DrawingUtilsNS.drawConnectors || (DrawingUtilsNS as any).default?.drawConnectors || (window as any).drawConnectors);
 const drawLandmarks = (DrawingUtilsNS.drawLandmarks || (DrawingUtilsNS as any).default?.drawLandmarks || (window as any).drawLandmarks);
 
-// --- Particle System (Saturn Model) ---
-const SaturnParticles = ({ gesture }: { gesture: 'OPEN' | 'FIST' | 'PINCH' | 'NONE' }) => {
+// --- Styled Components ---
+
+const CyberDatabaseLogo = () => {
+  return (
+    <div className="cyber-logo-container" style={{
+      width: '140px',
+      height: '80px',
+      position: 'relative',
+      marginBottom: '30px',
+      cursor: 'pointer',
+      transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+    }}>
+      <style>{`
+        .cyber-logo-container:hover { transform: scale(1.1); }
+        .cyber-logo-container:hover .logo-svg { filter: drop-shadow(0 0 15px ${COLOR_FUI_RED}); }
+        .cyber-logo-container:hover .scan-line { opacity: 1; top: 100%; }
+        
+        .logo-svg {
+          width: 100%;
+          height: 100%;
+          transition: all 0.3s ease;
+          filter: drop-shadow(0 0 5px ${COLOR_FUI_RED}66);
+        }
+
+        .scan-line {
+          position: absolute;
+          top: 0%;
+          left: 0;
+          width: 100%;
+          height: 1px;
+          background: ${COLOR_FUI_RED};
+          box-shadow: 0 0 8px ${COLOR_FUI_RED};
+          opacity: 0;
+          transition: top 1.5s linear, opacity 0.3s ease;
+          pointer-events: none;
+        }
+
+        @keyframes pulse-opacity {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+      
+      <svg className="logo-svg" viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Left Mountain */}
+        <path d="M10 90L60 10L110 90" stroke={COLOR_FUI_RED} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M30 60L55 60" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M20 75L75 75" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M45 35L75 82" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        
+        {/* Right Mountain */}
+        <path d="M90 90L140 10L190 90" stroke={COLOR_FUI_RED} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M110 60L135 60" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M100 75L155 75" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+        <path d="M125 35L155 82" stroke={COLOR_FUI_RED} strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+      
+      <div className="scan-line" />
+    </div>
+  );
+};
+
+// --- Particle System (Galaxy Model) ---
+const GalaxyParticles = ({ gesture }: { gesture: 'OPEN' | 'FIST' | 'PINCH' | 'NONE' }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
   const materialRef = useRef<THREE.MeshBasicMaterial>(null!);
   
   const particles = useMemo(() => {
     const temp = [];
-    const coreCount = Math.floor(PARTICLE_COUNT * 0.3);
-    const ringCount = PARTICLE_COUNT - coreCount;
+    const coreCount = Math.floor(PARTICLE_COUNT * 0.2);
+    const spiralCount = PARTICLE_COUNT - coreCount;
 
-    // 1. Generate Core (Sphere)
+    // 1. Core Particles (Supernova center)
     for (let i = 0; i < coreCount; i++) {
-      const u = Math.random();
-      const v = Math.random();
-      const theta = 2 * Math.PI * u;
-      const phi = Math.acos(2 * v - 1);
-      const r = 2.5 * Math.cbrt(Math.random()); // Radius of core
+      const r = Math.pow(Math.random(), 2) * 4;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
       
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.sin(phi) * Math.sin(theta);
@@ -49,38 +110,34 @@ const SaturnParticles = ({ gesture }: { gesture: 'OPEN' | 'FIST' | 'PINCH' | 'NO
       temp.push({
         x, y, z,
         baseX: x, baseY: y, baseZ: z,
-        scale: Math.random() * 0.05 + 0.02,
-        speed: (Math.random() * 0.002 + 0.001),
+        scale: Math.random() * 0.08 + 0.02,
+        speed: (Math.random() * 0.005 + 0.002),
         phase: Math.random() * Math.PI * 2,
         type: 'core'
       });
     }
 
-    // 2. Generate Rings (Flat Disk with tilt)
-    const ringInner = 4.5;
-    const ringOuter = 11.0;
-    const tilt = 0.4; // Axial tilt
-
-    for (let i = 0; i < ringCount; i++) {
-      const r = ringInner + (ringOuter - ringInner) * Math.sqrt(Math.random());
-      const theta = Math.random() * Math.PI * 2;
+    // 2. Spiral Arm Particles
+    const arms = 2;
+    for (let i = 0; i < spiralCount; i++) {
+      const r = 4 + Math.pow(Math.random(), 1.5) * 12;
+      const armIndex = i % arms;
+      const armAngle = (armIndex * 2 * Math.PI) / arms;
+      const spiralTurn = r * 0.4;
       
-      // Basic flat disk coordinates
+      const theta = armAngle + spiralTurn + (Math.random() - 0.5) * (4 / r);
+      
       let x = r * Math.cos(theta);
       let z = r * Math.sin(theta);
-      let y = (Math.random() - 0.5) * 0.15; // Thin ring thickness
+      let y = (Math.random() - 0.5) * (3 / r); // Thinner at edges
 
-      // Apply axial tilt (rotation around X)
-      const ry = y * Math.cos(tilt) - z * Math.sin(tilt);
-      const rz = y * Math.sin(tilt) + z * Math.cos(tilt);
-      
       temp.push({
-        x, y: ry, z: rz,
-        baseX: x, baseY: ry, baseZ: rz,
-        scale: Math.random() * 0.03 + 0.01,
-        speed: (Math.random() * 0.0005 + 0.0002) * (8 / r), // Keplerian-ish rotation
+        x, y, z,
+        baseX: x, baseY: y, baseZ: z,
+        scale: Math.random() * 0.04 + 0.01,
+        speed: (Math.random() * 0.0008 + 0.0002) * (10 / r),
         phase: Math.random() * Math.PI * 2,
-        type: 'ring'
+        type: 'spiral'
       });
     }
 
@@ -96,36 +153,22 @@ const SaturnParticles = ({ gesture }: { gesture: 'OPEN' | 'FIST' | 'PINCH' | 'NO
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     
-    // Handle Scale
-    if (gesture === 'OPEN') {
-      targetScale.current = 2.2;
-    } else if (gesture === 'FIST') {
-      targetScale.current = 0.25;
-    } else {
-      targetScale.current = 1.0;
-    }
+    if (gesture === 'OPEN') targetScale.current = 2.0;
+    else if (gesture === 'FIST') targetScale.current = 0.3;
+    else targetScale.current = 1.0;
 
-    // Handle Color - Pinch changes color to Red
-    if (gesture === 'PINCH') {
-      targetColor.current.set(COLOR_FUI_RED);
-    } else {
-      targetColor.current.set(COLOR_FUI_CYAN);
-    }
+    if (gesture === 'PINCH') targetColor.current.set(COLOR_FUI_RED);
+    else targetColor.current.set(COLOR_FUI_CYAN);
 
     currentScale.current = THREE.MathUtils.lerp(currentScale.current, targetScale.current, 0.08);
     currentColor.current.lerp(targetColor.current, 0.1);
 
-    if (materialRef.current) {
-      materialRef.current.color.copy(currentColor.current);
-    }
+    if (materialRef.current) materialRef.current.color.copy(currentColor.current);
 
     particles.forEach((p, i) => {
-      // Rotation logic
       const rotSpeed = p.speed * (1 / (currentScale.current + 0.2));
       const angle = time * rotSpeed + p.phase;
       
-      // Core rotates slightly differently or stays more static in a sphere
-      // For a dynamic effect, we rotate everything around Y
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);
       
@@ -134,19 +177,19 @@ const SaturnParticles = ({ gesture }: { gesture: 'OPEN' | 'FIST' | 'PINCH' | 'NO
       const ry = p.baseY * currentScale.current;
 
       dummy.position.set(rx, ry, rz);
-      const s = p.scale * (1 + Math.sin(time * 2 + p.phase) * 0.3);
+      const s = p.scale * (1 + Math.sin(time * 3 + p.phase) * 0.4);
       dummy.scale.setScalar(s);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-    meshRef.current.rotation.y += 0.0002;
+    meshRef.current.rotation.y += 0.0005;
   });
 
   return (
     <instancedMesh ref={meshRef} args={[null!, null!, PARTICLE_COUNT]}>
-      <sphereGeometry args={[1, 6, 6]} />
-      <meshBasicMaterial ref={materialRef} color={COLOR_FUI_CYAN} transparent opacity={0.9} />
+      <sphereGeometry args={[1, 4, 4]} />
+      <meshBasicMaterial ref={materialRef} color={COLOR_FUI_CYAN} transparent opacity={0.8} />
     </instancedMesh>
   );
 };
@@ -181,15 +224,14 @@ const useHandTracking = (active: boolean) => {
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
         
-        if (drawConnectors) drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: COLOR_FUI_GREEN, lineWidth: 2.5 });
-        if (drawLandmarks) drawLandmarks(canvasCtx, landmarks, { color: COLOR_FUI_CYAN, lineWidth: 1, radius: 2.5 });
+        if (drawConnectors) drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: COLOR_FUI_GREEN, lineWidth: 2 });
+        if (drawLandmarks) drawLandmarks(canvasCtx, landmarks, { color: COLOR_FUI_CYAN, lineWidth: 1, radius: 2 });
 
         const wrist = landmarks[0];
         const thumbTip = landmarks[4];
         const indexTip = landmarks[8];
         const fingerTips = [8, 12, 16, 20];
         
-        // General scale logic (avg dist from wrist)
         const distances = fingerTips.map(idx => {
           const tip = landmarks[idx];
           return Math.sqrt(Math.pow(tip.x - wrist.x, 2) + Math.pow(tip.y - wrist.y, 2));
@@ -197,21 +239,15 @@ const useHandTracking = (active: boolean) => {
         const thumbDistFromWrist = Math.sqrt(Math.pow(thumbTip.x - wrist.x, 2) + Math.pow(thumbTip.y - wrist.y, 2));
         const avgDist = (distances.reduce((a, b) => a + b, 0) + thumbDistFromWrist) / 5;
 
-        // Pinch logic (dist between thumb tip and index tip)
         const pinchDist = Math.sqrt(
           Math.pow(thumbTip.x - indexTip.x, 2) + 
           Math.pow(thumbTip.y - indexTip.y, 2)
         );
 
-        if (pinchDist < 0.05) {
-          setGesture('PINCH');
-        } else if (avgDist < 0.18) {
-          setGesture('FIST');
-        } else if (avgDist > 0.35) {
-          setGesture('OPEN');
-        } else {
-          setGesture('NONE');
-        }
+        if (pinchDist < 0.05) setGesture('PINCH');
+        else if (avgDist < 0.18) setGesture('FIST');
+        else if (avgDist > 0.35) setGesture('OPEN');
+        else setGesture('NONE');
       } else {
         setGesture('NONE');
       }
@@ -238,10 +274,6 @@ const useHandTracking = (active: boolean) => {
 
 // --- UI Sub-Components ---
 
-/**
- * Custom terminal text component for the login screen.
- * Displays lines one by one, then restarts.
- */
 const TerminalProtocolText = () => {
   const terminalLines = [
     "[+] KERNEL_ID: 0xFB82-991A",
@@ -255,21 +287,17 @@ const TerminalProtocolText = () => {
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
-
     if (currentIndex < terminalLines.length) {
-      // Add a line every 500ms
       timeout = setTimeout(() => {
         setVisibleLines(prev => [...prev, terminalLines[currentIndex]]);
         setCurrentIndex(prev => prev + 1);
       }, 500);
     } else {
-      // All lines shown, wait 3 seconds and restart
       timeout = setTimeout(() => {
         setVisibleLines([]);
         setCurrentIndex(0);
       }, 3000);
     }
-
     return () => clearTimeout(timeout);
   }, [currentIndex]);
 
@@ -293,34 +321,19 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
   return (
     <div style={{
       height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', background: '#120a0b',
+      alignItems: 'center', justifyContent: 'center', background: BG_COLOR_ACCENT,
       fontFamily: "'Orbitron', sans-serif", position: 'relative', overflow: 'hidden'
     }}>
       <style>{`
-        @keyframes terminal-blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
+        @keyframes terminal-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
       `}</style>
       
-      {/* Cyberpunk Grid Background */}
       <div style={{ 
-        position: 'absolute', 
-        inset: 0, 
-        opacity: 0.15, 
-        pointerEvents: 'none',
-        backgroundImage: `
-          linear-gradient(${COLOR_FUI_CYAN}11 1px, transparent 1px),
-          linear-gradient(90deg, ${COLOR_FUI_CYAN}11 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
+        position: 'absolute', inset: 0, opacity: 0.1, pointerEvents: 'none',
+        backgroundImage: `radial-gradient(circle at center, ${COLOR_FUI_CYAN}33 0%, transparent 70%), linear-gradient(${COLOR_FUI_CYAN}11 1px, transparent 1px), linear-gradient(90deg, ${COLOR_FUI_CYAN}11 1px, transparent 1px)`,
+        backgroundSize: '100% 100%, 50px 50px, 50px 50px',
         zIndex: 0
       }} />
-
-      <div style={{ position: 'absolute', inset: 0, opacity: 0.1, pointerEvents: 'none', zIndex: 1 }}>
-        <div style={{ position: 'absolute', top: '10%', left: '10%', width: '80%', height: '80%', border: `1px solid ${COLOR_FUI_CYAN}`, borderRadius: '50%' }} />
-        <div style={{ position: 'absolute', top: '20%', left: '20%', width: '60%', height: '60%', border: `1px dashed ${COLOR_FUI_RED}`, borderRadius: '50%' }} />
-      </div>
 
       <div style={{ position: 'absolute', top: 40, left: 40, color: COLOR_FUI_RED, fontSize: '0.7rem', zIndex: 2}}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -330,13 +343,12 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
         <div style={{ marginTop: 5, opacity: 0.5 }}>WELECOM TO THE DATABASE</div>
       </div>
 
-      {/* Terminal Animated Text Area */}
       <div style={{ position: 'absolute', bottom: 40, left: 40, color: COLOR_FUI_RED, fontSize: '0.75rem', minHeight: '100px', zIndex: 2}}>
         <TerminalProtocolText />
       </div>
 
-      <div style={{ textAlign: 'center', zIndex: 10 }}>
-        <Database size={100} color={COLOR_FUI_CYAN} style={{ filter: `drop-shadow(0 0 15px ${COLOR_FUI_CYAN})`, marginBottom: 30 }} />
+      <div style={{ textAlign: 'center', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <CyberDatabaseLogo />
         <h1 style={{ fontSize: '4rem', margin: 0, letterSpacing: 15, fontWeight: 900, color: '#FFF' }}>
           DATABASE <span style={{ color: COLOR_FUI_RED }}>LOGIN</span>
         </h1>
@@ -348,16 +360,16 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
         className="login-btn"
         style={{
           marginTop: 60, background: 'transparent', border: `2px solid ${COLOR_FUI_RED}`, 
-          color: COLOR_FUI_RED, padding: '20px 80px', fontSize: '1.4rem', cursor: 'pointer', 
+          color: COLOR_FUI_RED, padding: '15px 70px', fontSize: '1.2rem', cursor: 'pointer', 
           fontFamily: 'Orbitron', transition: 'all 0.4s cubic-bezier(0.19, 1, 0.22, 1)',
           boxShadow: `0 0 10px ${COLOR_FUI_RED}44`, position: 'relative', zIndex: 10
         }}
       >
         CONNECT
         <style>{`
-          .login-btn:hover { background: ${COLOR_FUI_RED}; color: #000; box-shadow: 0 0 30px ${COLOR_FUI_RED}; letter-spacing: 5px; }
-          .login-btn::before { content: ''; position: absolute; top: -10px; left: -10px; width: 10px; height: 10px; border-top: 2px solid ${COLOR_FUI_RED}; border-left: 2px solid ${COLOR_FUI_RED}; }
-          .login-btn::after { content: ''; position: absolute; bottom: -10px; right: -10px; width: 10px; height: 10px; border-bottom: 2px solid ${COLOR_FUI_RED}; border-right: 2px solid ${COLOR_FUI_RED}; }
+          .login-btn:hover { background: ${COLOR_FUI_RED}; color: #000; box-shadow: 0 0 40px ${COLOR_FUI_RED}; letter-spacing: 5px; }
+          .login-btn::before { content: ''; position: absolute; top: -8px; left: -8px; width: 8px; height: 8px; border-top: 2px solid ${COLOR_FUI_RED}; border-left: 2px solid ${COLOR_FUI_RED}; }
+          .login-btn::after { content: ''; position: absolute; bottom: -8px; right: -8px; width: 8px; height: 8px; border-bottom: 2px solid ${COLOR_FUI_RED}; border-right: 2px solid ${COLOR_FUI_RED}; }
         `}</style>
       </button>
     </div>
@@ -367,7 +379,6 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
 const LoadingScreen = () => {
   const [log, setLog] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
-  
   const bootLogs = [
     "> Initializing cTOS Kernel...",
     "> Accessing Database Cluster 0x01",
@@ -382,38 +393,32 @@ const LoadingScreen = () => {
     let currentLogIndex = 0;
     const startTime = Date.now();
     const duration = 4000;
-
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const calculatedProgress = Math.min(100, (elapsed / duration) * 100);
       setProgress(calculatedProgress);
-
       const logThreshold = (bootLogs.length * (calculatedProgress / 100));
       if (currentLogIndex < logThreshold && currentLogIndex < bootLogs.length) {
         setLog(prev => [...prev, bootLogs[currentLogIndex]]);
         currentLogIndex++;
       }
-
-      if (calculatedProgress >= 100) {
-        clearInterval(interval);
-      }
+      if (calculatedProgress >= 100) clearInterval(interval);
     }, 50);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div style={{
       height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', background: '#120a0b', color: COLOR_FUI_CYAN
+      alignItems: 'center', justifyContent: 'center', background: BG_COLOR_ACCENT, color: COLOR_FUI_CYAN
     }}>
       <div style={{ width: 400, textAlign: 'left', fontFamily: 'monospace', fontSize: '0.8rem', height: 150 }}>
         {log.map((l, i) => <div key={i} style={{ marginBottom: 4, color: i === log.length - 1 ? COLOR_FUI_GREEN : COLOR_FUI_CYAN }}>{l}</div>)}
       </div>
-      <div style={{ width: 400, height: 4, background: '#111', marginTop: 20, position: 'relative' }}>
-        <div style={{ width: `${progress}%`, height: '100%', background: COLOR_FUI_RED, boxShadow: `0 0 10px ${COLOR_FUI_RED}` }} />
+      <div style={{ width: 400, height: 2, background: '#111', marginTop: 20, position: 'relative' }}>
+        <div style={{ width: `${progress}%`, height: '100%', background: COLOR_FUI_RED, boxShadow: `0 0 15px ${COLOR_FUI_RED}` }} />
       </div>
-      <div style={{ marginTop: 10, color: COLOR_FUI_RED, fontSize: '0.6rem', letterSpacing: 2 }}>{Math.floor(progress)}% Authenticating</div>
+      <div style={{ marginTop: 15, color: COLOR_FUI_RED, fontSize: '0.6rem', letterSpacing: 4 }}>{Math.floor(progress)}% AUTHENTICATING_SESSION</div>
     </div>
   );
 };
@@ -422,62 +427,67 @@ const MainFUI = () => {
   const { gesture, videoRef, canvasRef } = useHandTracking(true);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', background: '#000' }}>
       <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-        <Canvas camera={{ position: [0, 0, 18], fov: 50 }}>
+        <Canvas camera={{ position: [0, 0, 22], fov: 45 }}>
           <color attach="background" args={['#000']} />
           <ambientLight intensity={0.5} />
+          <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
           <Suspense fallback={null}>
-            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-                <SaturnParticles gesture={gesture} />
+            <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+                <GalaxyParticles gesture={gesture} />
             </Float>
-            <mesh rotation={[Math.PI / 2, 0.2, 0]}>
-                <ringGeometry args={[12, 12.1, 128]} />
-                <meshBasicMaterial color={COLOR_FUI_RED} transparent opacity={0.1} side={THREE.DoubleSide} />
+            {/* Background Orbits */}
+            <mesh rotation={[Math.PI / 2, 0.1, 0]}>
+                <ringGeometry args={[18, 18.05, 128]} />
+                <meshBasicMaterial color={COLOR_FUI_RED} transparent opacity={0.05} side={THREE.DoubleSide} />
             </mesh>
-            <mesh rotation={[Math.PI / 2.5, -0.4, 0]}>
-                <ringGeometry args={[15, 15.05, 128]} />
-                <meshBasicMaterial color={COLOR_FUI_CYAN} transparent opacity={0.1} side={THREE.DoubleSide} />
+            <mesh rotation={[Math.PI / 2.5, -0.2, 0]}>
+                <ringGeometry args={[22, 22.02, 128]} />
+                <meshBasicMaterial color={COLOR_FUI_CYAN} transparent opacity={0.05} side={THREE.DoubleSide} />
             </mesh>
           </Suspense>
           <EffectComposer>
-            <Bloom intensity={2.5} luminanceThreshold={0.1} mipmapBlur />
+            <Bloom intensity={1.5} luminanceThreshold={0.1} mipmapBlur />
+            <Noise opacity={0.02} />
+            <Vignette eskil={false} offset={0.1} darkness={1.1} />
           </EffectComposer>
-          <OrbitControls enableZoom={false} enablePan={false} />
+          <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
         </Canvas>
       </div>
 
       <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
         
+        {/* Header HUD */}
         <div style={{ 
           position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)',
           display: 'flex', flexDirection: 'column', alignItems: 'center'
         }}>
           <h2 style={{
-            fontFamily: "'Rajdhani', sans-serif", fontSize: '3rem', margin: 0, color: COLOR_FUI_RED,
+            fontFamily: "'Rajdhani', sans-serif", fontSize: '2.5rem', margin: 0, color: COLOR_FUI_RED,
             fontWeight: 700, letterSpacing: 15, textShadow: `0 0 15px ${COLOR_FUI_RED}88`
           }}>
             SYSTEM DATABASE
           </h2>
-          <div style={{ display: 'flex', gap: 40, marginTop: 10, alignItems: 'center' }}>
-            <div style={{ height: 1, width: 200, background: `linear-gradient(90deg, transparent, ${COLOR_FUI_CYAN})` }} />
-            <div style={{ display: 'flex', gap: 10, color: COLOR_FUI_RED, fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                <Cpu size={14} /> <span>CPU: 42%</span>
-                <Zap size={14} /> <span>MEM: 64.2GB</span>
-                <Radio size={14} /> <span>SIGNAL: 100%</span>
+          <div style={{ display: 'flex', gap: 30, marginTop: 10, alignItems: 'center' }}>
+            <div style={{ height: 1, width: 150, background: `linear-gradient(90deg, transparent, ${COLOR_FUI_CYAN})` }} />
+            <div style={{ display: 'flex', gap: 15, color: COLOR_FUI_RED, fontSize: '0.65rem', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Cpu size={12} /> CPU: 42%</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Zap size={12} /> MEM: 64.2GB</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Radio size={12} /> SIGNAL: 100%</div>
             </div>
-            <div style={{ height: 1, width: 200, background: `linear-gradient(90deg, ${COLOR_FUI_CYAN}, transparent)` }} />
+            <div style={{ height: 1, width: 150, background: `linear-gradient(90deg, ${COLOR_FUI_CYAN}, transparent)` }} />
           </div>
         </div>
 
-        {/* Traffic Analytics - Top Right, Below Title */}
+        {/* Traffic Analytics */}
         <div style={{ position: 'absolute', top: 140, right: 50, width: 220, pointerEvents: 'auto' }}>
-            <div style={{ borderLeft: `3px solid ${COLOR_FUI_RED}`, paddingLeft: 15 }}>
-                <div style={{ color: COLOR_FUI_RED, fontSize: '0.9rem', fontWeight: 700, letterSpacing: 2 }}>TRAFFIC ANALYTICS</div>
+            <div style={{ borderLeft: `2px solid ${COLOR_FUI_RED}`, paddingLeft: 15, background: 'rgba(247, 80, 73, 0.05)', padding: '10px 15px' }}>
+                <div style={{ color: COLOR_FUI_RED, fontSize: '0.8rem', fontWeight: 700, letterSpacing: 2 }}>TRAFFIC ANALYTICS</div>
                 <div style={{ marginTop: 10 }}>
                     {[...Array(4)].map((_, i) => (
                         <div key={i} style={{ marginBottom: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: COLOR_FUI_RED, opacity: 0.9 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.55rem', color: COLOR_FUI_RED, opacity: 0.8 }}>
                                 <span>NET_NODE_{i}</span>
                                 <span>{Math.floor(Math.random() * 1000)}kb/s</span>
                             </div>
@@ -490,59 +500,50 @@ const MainFUI = () => {
             </div>
         </div>
 
+        {/* Biometric Viewport */}
         <div style={{ position: 'absolute', bottom: 50, left: 50, pointerEvents: 'auto' }}>
             <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
-                {/* EXPLODE STATUS LIGHT */}
                 <div style={{
-                    padding: '8px 20px', fontSize: '0.8rem', fontFamily: 'Rajdhani',
-                    border: `1px solid ${COLOR_FUI_RED}`, 
-                    color: COLOR_FUI_RED,
-                    background: 'rgba(0,0,0,0.5)',
-                    boxShadow: 'none',
-                    transition: 'all 0.2s ease',
-                    display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700
+                    padding: '6px 15px', fontSize: '0.7rem', fontFamily: 'Rajdhani',
+                    border: `1px solid ${gesture === 'OPEN' ? COLOR_FUI_GREEN : COLOR_FUI_RED}`, 
+                    color: gesture === 'OPEN' ? COLOR_FUI_GREEN : COLOR_FUI_RED,
+                    background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700
                 }}>
                     <div style={{ 
-                      width: 10, height: 10, borderRadius: '50%', 
+                      width: 8, height: 8, borderRadius: '50%', 
                       background: gesture === 'OPEN' ? COLOR_FUI_GREEN : '#333',
-                      transition: 'background 0.2s ease',
-                      boxShadow: 'none' 
+                      transition: 'background 0.2s ease'
                     }} />
                     EXPLODE
                 </div>
 
-                {/* SCALING STATUS LIGHT */}
                 <div style={{
-                    padding: '8px 20px', fontSize: '0.8rem', fontFamily: 'Rajdhani',
-                    border: `1px solid ${COLOR_FUI_RED}`,
-                    color: COLOR_FUI_RED,
-                    background: 'rgba(0,0,0,0.5)',
-                    boxShadow: 'none',
-                    transition: 'all 0.2s ease',
-                    display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700
+                    padding: '6px 15px', fontSize: '0.7rem', fontFamily: 'Rajdhani',
+                    border: `1px solid ${gesture === 'FIST' ? COLOR_FUI_GREEN : COLOR_FUI_RED}`,
+                    color: gesture === 'FIST' ? COLOR_FUI_GREEN : COLOR_FUI_RED,
+                    background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700
                 }}>
                     <div style={{ 
-                      width: 10, height: 10, borderRadius: '50%', 
+                      width: 8, height: 8, borderRadius: '50%', 
                       background: gesture === 'FIST' ? COLOR_FUI_GREEN : '#333',
-                      transition: 'background 0.2s ease',
-                      boxShadow: 'none' 
+                      transition: 'background 0.2s ease'
                     }} />
                     SCALING
                 </div>
             </div>
 
             <div style={{ 
-                width: 240, height: 180, border: `1px solid rgba(94, 246, 255, 0.4)`, 
-                background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', position: 'relative',
-                overflow: 'hidden', boxShadow: '0 0 20px rgba(0,0,0,0.5)'
+                width: 240, height: 180, border: `1px solid rgba(94, 246, 255, 0.2)`, 
+                background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)', position: 'relative',
+                overflow: 'hidden'
             }}>
                 <div style={{ 
                   background: 'rgba(94, 246, 255, 0.1)', height: 25, display: 'flex', 
                   alignItems: 'center', padding: '0 10px', justifyContent: 'space-between',
-                  borderBottom: `1px solid rgba(94, 246, 255, 0.2)`
+                  borderBottom: `1px solid rgba(94, 246, 255, 0.1)`
                 }}>
-                  <div style={{ color: COLOR_FUI_CYAN, fontSize: '0.5rem', letterSpacing: 1.5 }}>BIOMETRIC_v02</div>
-                  <Lock size={10} color={COLOR_FUI_RED} />
+                  <div style={{ color: COLOR_FUI_CYAN, fontSize: '0.5rem', letterSpacing: 2 }}>BIOMETRIC_LINK_v4</div>
+                  <ShieldCheck size={10} color={COLOR_FUI_GREEN} />
                 </div>
                 
                 <canvas ref={canvasRef} width={240} height={180} style={{ position: 'absolute', inset: 0, transform: 'scaleX(-1) translateY(12px)' }} />
@@ -550,32 +551,34 @@ const MainFUI = () => {
                 
                 <div style={{ position: 'absolute', top: 25, left: 0, width: 2, height: 15, background: COLOR_FUI_CYAN }} />
                 <div style={{ position: 'absolute', bottom: 0, right: 0, width: 15, height: 2, background: COLOR_FUI_RED }} />
-                
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(94,246,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(94,246,255,0.05) 1px, transparent 1px)', backgroundSize: '15px 15px', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(94,246,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(94,246,255,0.03) 1px, transparent 1px)', backgroundSize: '20px 20px', pointerEvents: 'none' }} />
             </div>
-            <div style={{ marginTop: 10, color: COLOR_FUI_CYAN, fontSize: '0.6rem', opacity: 0.6 }}>SYSTEM_SOURCE: /dev/camera/video0</div>
+            <div style={{ marginTop: 10, color: COLOR_FUI_CYAN, fontSize: '0.6rem', opacity: 0.5, letterSpacing: 1 }}>/DEV/NODE/PRIMARY_CAM</div>
         </div>
 
-        {/* Nodal Status - Bottom Right */}
+        {/* Nodal Status HUD */}
         <div style={{ position: 'absolute', bottom: 50, right: 50, width: 220, pointerEvents: 'auto' }}>
-            <div style={{ borderRight: `3px solid ${COLOR_FUI_CYAN}`, paddingRight: 15, textAlign: 'right' }}>
-                <div style={{ color: COLOR_FUI_RED, fontSize: '0.9rem', fontWeight: 700, letterSpacing: 2 }}>NODAL STATUS</div>
+            <div style={{ borderRight: `2px solid ${COLOR_FUI_CYAN}`, paddingRight: 15, textAlign: 'right', background: 'rgba(94, 246, 255, 0.05)', padding: '10px 15px' }}>
+                <div style={{ color: COLOR_FUI_RED, fontSize: '0.8rem', fontWeight: 700, letterSpacing: 2 }}>NODAL STATUS</div>
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <div style={{ color: COLOR_FUI_GREEN, fontSize: '0.6rem' }}>● GALAXY_CORE: STABLE</div>
-                    <div style={{ color: COLOR_FUI_GREEN, fontSize: '0.6rem' }}>● SYNC_STATE: ACTIVE</div>
-                    <div style={{ color: COLOR_FUI_RED, fontSize: '0.6rem' }}>○ GESTURE_OVERRIDE: OFF</div>
+                    <div style={{ color: COLOR_FUI_GREEN, fontSize: '0.6rem' }}>● CORE_CLUSTER: STABLE</div>
+                    <div style={{ color: COLOR_FUI_GREEN, fontSize: '0.6rem' }}>● NEURAL_SYNC: ACTIVE</div>
+                    <div style={{ color: gesture !== 'NONE' ? COLOR_FUI_GREEN : COLOR_FUI_RED, fontSize: '0.6rem' }}>
+                      {gesture !== 'NONE' ? '●' : '○'} GESTURE_OVERRIDE: {gesture !== 'NONE' ? 'ON' : 'OFF'}
+                    </div>
                 </div>
             </div>
         </div>
 
+        {/* Post Process Overlays */}
         <div style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%)',
-            backgroundSize: '100% 4px', zIndex: 10, opacity: 0.5
+            background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.02) 50%)',
+            backgroundSize: '100% 4px', zIndex: 10
         }} />
         <div style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
-            boxShadow: `inset 0 0 150px rgba(0,0,0,1)`, zIndex: 11
+            boxShadow: `inset 0 0 100px rgba(0,0,0,0.8)`, zIndex: 11
         }} />
       </div>
     </div>
